@@ -1,0 +1,31 @@
+<mat-toolbar color="primary">
+  <span>{{ title }}</span>
+  <span class="spacer"></span>
+  <button mat-icon-button>
+    <mat-icon>account_circle</mat-icon>
+  </button>
+</mat-toolbar>
+
+<div class="content">
+  <div class="welcome-container">
+    <h1>Welcome to {{ title }}!</h1>
+    <p>Share your RAW moments - No filters, No AI, Just real life.</p>
+    
+    <div class="feature-list">
+      <mat-icon>camera_alt</mat-icon>
+      <p>Post photos and videos directly from your camera</p>
+    </div>
+    
+    <div class="feature-list">
+      <mat-icon>comment</mat-icon>
+      <p>Comment on posts from your friends</p>
+    </div>
+    
+    <div class="feature-list">
+      <mat-icon>person</mat-icon>
+      <p>View and manage your profile</p>
+    </div>
+  </div>
+  
+  <router-outlet></router-outlet>
+</div>
