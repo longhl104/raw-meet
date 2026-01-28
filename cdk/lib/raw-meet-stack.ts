@@ -3,6 +3,8 @@ import { Construct } from 'constructs';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 interface RawMeetStackProps extends cdk.StackProps {
   environment: 'local' | 'production';
@@ -111,6 +113,44 @@ export class RawMeetStack extends cdk.Stack {
       },
     });
 
+    // S3 Bucket for Media Storage
+    const mediaBucket = new s3.Bucket(this, `RawMeetMediaBucket-${environment}`, {
+      bucketName: `raw-meet-media-${environment}`,
+      versioned: false,
+      publicReadAccess: false,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.POST,
+          ],
+          allowedOrigins: environment === 'production' 
+            ? ['https://raw-meet.com'] 
+            : ['http://localhost:4200', 'http://localhost:5000'],
+          allowedHeaders: ['*'],
+          maxAge: 3000,
+        },
+      ],
+      lifecycleRules: [
+        {
+          enabled: true,
+          transitions: [
+            {
+              storageClass: s3.StorageClass.INTELLIGENT_TIERING,
+              transitionAfter: cdk.Duration.days(30),
+            },
+          ],
+        },
+      ],
+      removalPolicy: environment === 'production'
+        ? cdk.RemovalPolicy.RETAIN
+        : cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: environment !== 'production',
+    });
+
     // PostgreSQL Database
     const dbInstance = new rds.DatabaseInstance(this, `RawMeetDB-${environment}`, {
       engine: rds.DatabaseInstanceEngine.postgres({
@@ -161,6 +201,16 @@ export class RawMeetStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'DatabasePort', {
       value: dbInstance.dbInstanceEndpointPort,
       description: 'PostgreSQL Database Port',
+    });
+
+    new cdk.CfnOutput(this, 'MediaBucketName', {
+      value: mediaBucket.bucketName,
+      description: 'S3 Media Bucket Name',
+    });
+
+    new cdk.CfnOutput(this, 'MediaBucketArn', {
+      value: mediaBucket.bucketArn,
+      description: 'S3 Media Bucket ARN',
     });
   }
 }
